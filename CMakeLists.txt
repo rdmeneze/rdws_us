@@ -20,3 +20,4 @@ endif()
 
 # --- Subprojetos ---
 add_subdirectory(src/greeting_app)
+add_subdirectory(src/loader)

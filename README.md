@@ -1,28 +1,42 @@
 # rdws_us
 
-Erster Entwurf eines Orchestrators für Microservices, geschrieben in modernem C++. Ziel ist es, einige Dienste für das 
-Abfragen, Lesen, Aktualisieren und Löschen von Datensätzen in einigen Tabellen einer Datenbank  auf einem lokalen Server 
-mit Fedora Server bereitzustellen.
+Projeto C++ modular com multiplos subprojetos em `src/`, cada um com:
 
-## Struktur
+- biblioteca interna (`<nome>_core`)
+- executavel (`<nome>_app`)
+- testes unitarios (`<nome>_test`)
 
-- `CMakeLists.txt`: Build-Root-Konfiguration und Integration von GoogleTest (FetchContent).
-- `include/rdws_us/greeting.hpp`: interface publica.
-- `src/greeting.cpp`: implementacao da biblioteca.
-- `src/main.cpp`: programa principal.
-- `tests/greeting_test.cpp`: testes com GoogleTest.
+## Estrutura atual
 
-## Schneller Aufbau
+- `CMakeLists.txt`: configuracao raiz e dependencia de GoogleTest.
+- `src/greeting_app/`: subprojeto de exemplo.
+- `src/loader/`: subprojeto de exemplo.
+- `tools/new_subproject.sh`: gerador de novo subprojeto.
+
+## Build e testes
 
 ```bash
-cmake -S . -B build
+cmake -S . -B build -DBUILD_TESTING=ON
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-## App ausführen
+## Criar um novo subprojeto em 1 minuto
 
 ```bash
-./build/rdws_app
+./tools/new_subproject.sh auth
+cmake -S . -B build -DBUILD_TESTING=ON
+cmake --build build
+ctest --test-dir build --output-on-failure
 ```
-# rdws_us
+
+Isso cria:
+
+- `src/auth/CMakeLists.txt`
+- `src/auth/auth.hpp`
+- `src/auth/auth.cpp`
+- `src/auth/main.cpp`
+- `src/auth/tests/CMakeLists.txt`
+- `src/auth/tests/auth_test.cpp`
+
+E adiciona automaticamente `add_subdirectory(src/auth)` ao `CMakeLists.txt` raiz.
