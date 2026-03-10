@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "rdws_us/greeting.hpp"
+#include "greeting.hpp"
 
 int main() {
   std::cout << rdws_us::make_greeting("CMake") << '\n';

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "rdws_us/greeting.hpp"
+#include "greeting.hpp"
 
 TEST(GreetingTest, ReturnsWorldWhenNameIsEmpty) {
   EXPECT_EQ(rdws_us::make_greeting(""), "Hello, world!");

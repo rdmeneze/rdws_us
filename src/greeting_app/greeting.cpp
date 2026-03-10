@@ -1,4 +1,4 @@
-#include "rdws_us/greeting.hpp"
+#include "greeting.hpp"
 
 namespace rdws_us {
 
