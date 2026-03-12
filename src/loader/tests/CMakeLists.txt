@@ -1,4 +1,6 @@
-add_executable(loader_test loader_test.cpp)
+add_executable(loader_test loader_test.cpp
+        ../services.cpp
+        ../services.h)
 target_link_libraries(loader_test PRIVATE loader_core)
 
 if(TARGET GTest::gtest_main)

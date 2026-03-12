@@ -1,0 +1,9 @@
+{
+  "services": [
+    {
+      "name": "service-test1",
+      "binary": "test1",
+      "instances": 1
+    }
+  ]
+}
