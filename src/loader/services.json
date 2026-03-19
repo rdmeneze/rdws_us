@@ -1,0 +1,12 @@
+[
+  {
+    "name": "service-test1",
+    "path": "./services/test1",
+    "instances": 1
+  },
+  {
+    "name": "service-test2",
+    "path": "./services/test2",
+    "instances": 1
+  }
+]

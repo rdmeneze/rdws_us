@@ -1,19 +1,19 @@
 # rdws_us
 
-Projeto C++ modular com multiplos subprojetos em `src/`, cada um com:
+Modular C++ prooject with multiple supbprojects in `src/`, each with:
 
-- biblioteca interna (`<nome>_core`)
-- executavel (`<nome>_app`)
-- testes unitarios (`<nome>_test`)
+- internal library (`<name>_core`)
+- binary exe (`<name>_app`)
+- unit tests (`<name>_test`)
 
-## Estrutura atual
+## Current structure
 
-- `CMakeLists.txt`: configuracao raiz e dependencia de GoogleTest.
-- `src/greeting_app/`: subprojeto de exemplo.
-- `src/loader/`: subprojeto de exemplo.
-- `tools/new_subproject.sh`: gerador de novo subprojeto.
+- `CMakeLists.txt`: root configiration and googletest dependency 
+- `src/greeting_app/`: example subproject
+- `src/loader/`: main loader subproject
+- `tools/new_subproject.sh`: new subprject generator
 
-## Build e testes
+## Build and tests
 
 ```bash
 cmake -S . -B build -DBUILD_TESTING=ON
@@ -21,7 +21,7 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-## Criar um novo subprojeto em 1 minuto
+## Create a new subproject 
 
 ```bash
 ./tools/new_subproject.sh auth
@@ -30,7 +30,7 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Isso cria:
+Result:
 
 - `src/auth/CMakeLists.txt`
 - `src/auth/auth.hpp`
@@ -39,4 +39,3 @@ Isso cria:
 - `src/auth/tests/CMakeLists.txt`
 - `src/auth/tests/auth_test.cpp`
 
-E adiciona automaticamente `add_subdirectory(src/auth)` ao `CMakeLists.txt` raiz.
