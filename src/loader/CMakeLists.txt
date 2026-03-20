@@ -1,11 +1,11 @@
 
 add_library(loader_core
         Loader.cpp
-        Services.cpp
-        Services.h
-        Service.h
-        Utils.cpp
-        Utils.h
+        Services/Services.cpp
+        Services/Services.h
+        Services/Service.h
+        Utils/Utils.cpp
+        Utils/Utils.h
 )
 
 target_include_directories(loader_core PUBLIC
@@ -19,6 +19,7 @@ target_link_libraries(loader_core PUBLIC
     inih_lib
     ValiJSON::valijson
     rdws_shared_validation
+    rdws_shared_config
 )
 
 # --- Executable ---

@@ -17,7 +17,9 @@ namespace loader {
         [[nodiscard]] std::filesystem::path getPath() const { return path; };
         [[nodiscard]] std::string getName() const { return name; };
         [[nodiscard]] int getInstances() const { return instances; };
+        [[nodiscard]] bool isActive() const { return active; };
         private:
+            bool active;
             std::string name;
             std::filesystem::path path;
             int instances;

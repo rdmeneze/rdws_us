@@ -18,6 +18,7 @@ if(BUILD_TESTING)
   FetchContent_MakeAvailable(googletest)
 endif()
 
+
 # --- Third-party ---
 add_subdirectory(src/third_party)
 
@@ -27,3 +28,11 @@ add_subdirectory(src/shared)
 # --- Subprojetos ---
 add_subdirectory(src/greeting_app)
 add_subdirectory(src/loader)
+
+# --- Copy global configuration files ---
+add_custom_target(copy_env_file ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_SOURCE_DIR}/.env.dev
+        ${CMAKE_BINARY_DIR}/.env
+    COMMENT "Copying .env.dev to build directory as .env"
+)

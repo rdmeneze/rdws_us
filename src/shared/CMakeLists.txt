@@ -12,7 +12,7 @@ target_include_directories(rdws_shared_validation PUBLIC
 )
 
 target_link_libraries(rdws_shared_validation PUBLIC
-    ValiJSON::valijson
+    valijson_wrapper
 )
 
 # Required for jsoncpp (used by valijson adapters)
@@ -26,6 +26,20 @@ if(JSONCPP_FOUND)
 else()
     message(WARNING "jsoncpp not found via pkg-config, validation may not work correctly")
 endif()
+
+
+add_library(rdws_shared_config 
+    config/config.cpp
+    config/config.h
+)
+
+target_include_directories(rdws_shared_config PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(rdws_shared_config PUBLIC
+    dotenv_wrapper
+)
 
 # --- Testes para shared components ---
 if(BUILD_TESTING)

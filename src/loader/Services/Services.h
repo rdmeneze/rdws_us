@@ -4,10 +4,8 @@
 #include <filesystem>
 #include <list>
 #include <string>
-#include <vector>
 #include "Service.h"
 #include "validator/schema_validator.h"
-
 
 namespace loader {
     class Services {
@@ -26,6 +24,8 @@ namespace loader {
             // Iterator support
             [[nodiscard]] std::list<Service>::const_iterator begin() const { return loadedServices.begin(); }
             [[nodiscard]] std::list<Service>::const_iterator end() const { return loadedServices.end(); }
+
+            //bool start()
 
         private:
             std::list<Service> loadedServices;
