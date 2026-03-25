@@ -6,6 +6,11 @@ add_library(loader_core
         Services/Service.h
         Utils/Utils.cpp
         Utils/Utils.h
+        Services/ServiceIPCConfig.h
+        Services/ServiceInstance.h
+        Services/ServiceInstance.cpp
+        Services/ServiceManager.h
+        Services/ServiceManager.cpp
 )
 
 target_include_directories(loader_core PUBLIC
@@ -22,18 +27,28 @@ target_link_libraries(loader_core PUBLIC
     rdws_shared_config
 )
 
-# --- Executable ---
+# --- Executables ---
 add_executable(loader_app
     main.cpp
 )
 target_link_libraries(loader_app PRIVATE loader_core)
+
+# Service Manager Test
+add_executable(service_manager_test
+    service_manager_test.cpp
+)
+target_link_libraries(service_manager_test PRIVATE loader_core)
 
 # --- Copy configuration files ---
 add_custom_command(TARGET loader_app POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_SOURCE_DIR}/services.json
         $<TARGET_FILE_DIR:loader_app>/services.json
-    COMMENT "Copying services.json to the binary directory"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_SOURCE_DIR}/example_services.json
+        $<TARGET_FILE_DIR:loader_app>/example_services.json
+    COMMENT "Copying configuration files"
+    #--  COMMENT "Copying services.json to the binary directory"
 )
 
 # --- Unit tests ---

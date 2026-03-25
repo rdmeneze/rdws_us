@@ -36,7 +36,8 @@ namespace loader::schemas {
                 }
             },
             "required": ["name", "path", "instances"],
-            "additionalProperties": false)";
+            "additionalProperties": false
+        )";
     }
 
     // JSON Schema for validating individual service objects
@@ -46,8 +47,8 @@ namespace loader::schemas {
         "type": "object",
         "title": "Service Definition",
         "description": "Schema for validating a single service configuration",)" + 
-        getServicePropertiesJson() + R"(
-    })";
+        getServicePropertiesJson() + 
+        R"(})";
 
     // JSON Schema for validating arrays of services (like services.json)
     const std::string SERVICES_ARRAY_SCHEMA = R"({
@@ -59,8 +60,8 @@ namespace loader::schemas {
             "type": "object",
             "title": "Service Definition",
             "description": "Schema for validating a single service configuration",)" + 
-            getServicePropertiesJson() + R"(
-        },
+            getServicePropertiesJson() + 
+            R"(},
         "minItems": 0,
         "maxItems": 50
     })";

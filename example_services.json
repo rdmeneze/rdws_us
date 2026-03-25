@@ -1,0 +1,14 @@
+[
+  {
+    "name": "example_service",
+    "path": "./bin/example_service",
+    "instances": 2,
+    "active": true
+  },
+  {
+    "name": "greeting_service", 
+    "path": "./bin/greeting_app",
+    "instances": 1,
+    "active": false
+  }
+]

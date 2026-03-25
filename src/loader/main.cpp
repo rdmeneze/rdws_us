@@ -1,10 +1,30 @@
 #include <iostream>
 #include <filesystem>
+#include <csignal>
+#include <thread>
+#include <chrono>
 #include <config/config.h>
 
 #include "Loader.h"
+#include "Services/ServiceManager.h"
 #include "Services/Services.h"
 #include "Utils/Utils.h"
+
+// Global service manager for signal handling
+static loader::ServiceManager* g_serviceManager = nullptr;
+
+// Signal handler for graceful shutdown
+void signalHandler(int signal) {
+    std::cout << "\nReceived signal " << signal << ", shutting down services..." << std::endl;
+    
+    if (g_serviceManager != nullptr) {
+        g_serviceManager->stopAllServices();
+    }
+    
+    // Restore default signal handler and re-raise signal
+    std::signal(signal, SIG_DFL);
+    std::raise(signal);
+}
 
 int main(const int argc, char* argv[]) {
 
@@ -46,7 +66,22 @@ int main(const int argc, char* argv[]) {
         } else {
             std::cout << "\nService 'service-test1' not found" << std::endl;
         }
-            
+
+        loader::ServiceManager serviceManager(serviceLoader.getLoadedServices());
+        g_serviceManager = &serviceManager;  // Set global reference for signal handler
+
+        // Register signal handlers for graceful shutdown
+        std::signal(SIGINT, signalHandler);   // Ctrl+C
+        std::signal(SIGTERM, signalHandler);  // kill command
+
+        serviceManager.startAllServices();
+        
+        std::cout << "\nServices started. Press Ctrl+C to stop all services and exit." << std::endl;
+        
+        // Keep the loader running until interrupted
+        while (true) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
 
     } catch (const std::exception& e) {
         std::cerr << "Error loading services: " << e.what() << std::endl;

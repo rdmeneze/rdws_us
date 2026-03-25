@@ -2,9 +2,14 @@ cmake_minimum_required(VERSION 3.16)
 
 project(rdws_us VERSION 0.1.0 LANGUAGES C CXX)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_EXTENSIONS ON)
+
+# Configure debug settings
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -DDEBUG")
+    message(STATUS "Debug mode enabled with symbols")
+endif()
 
 include(CTest)
 if(BUILD_TESTING)
@@ -28,6 +33,9 @@ add_subdirectory(src/shared)
 # --- Subprojetos ---
 add_subdirectory(src/greeting_app)
 add_subdirectory(src/loader)
+
+# --- Services ---
+add_subdirectory(src/services)
 
 # --- Copy global configuration files ---
 add_custom_target(copy_env_file ALL

@@ -15,6 +15,7 @@ namespace loader {
 
             // Access methods
             [[nodiscard]] const std::list<Service>& getServices() const { return loadedServices; }
+            [[nodiscard]] const std::list<Service>& getLoadedServices() const { return loadedServices; }
             [[nodiscard]] size_t getServiceCount() const { return loadedServices.size(); }
             [[nodiscard]] bool isEmpty() const { return loadedServices.empty(); }
             
@@ -25,7 +26,7 @@ namespace loader {
             [[nodiscard]] std::list<Service>::const_iterator begin() const { return loadedServices.begin(); }
             [[nodiscard]] std::list<Service>::const_iterator end() const { return loadedServices.end(); }
 
-            //bool start()
+            [[nodiscard]] bool startService();
 
         private:
             std::list<Service> loadedServices;

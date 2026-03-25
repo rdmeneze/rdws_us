@@ -53,12 +53,18 @@ namespace loader {
 
         for (const auto& serviceJson : servicesJson) {
             try {
-                std::string serviceName = serviceJson["name"].asString();
-                std::string servicePath = serviceJson["path"].asString();
-                int serviceInstances = serviceJson["instances"].asInt();
+                std::string serviceName = serviceJson.get("name","").asString();
+                std::string servicePath = serviceJson.get("path","").asString();
+                int serviceInstances = serviceJson.get("instances", 0).asInt();
+                bool serviceActive = serviceJson.get("active", false).asBool();
 
-                // Create service object and add to list
-                loadedServices.emplace_back(serviceName, servicePath, serviceInstances);
+                // Create service object directly in the list
+                loadedServices.emplace_back(
+                    serviceName, 
+                    servicePath, 
+                    serviceInstances, 
+                    serviceActive
+                );
                 
             } catch (const std::exception& e) {
                 throw std::runtime_error("Error loading service: " + std::string(e.what()));

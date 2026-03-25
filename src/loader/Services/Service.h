@@ -8,9 +8,10 @@
 
 namespace loader {
 
-    struct Service {
-        Service(std::string name, std::filesystem::path path, const int instances):
-                name(std::move(name)), path(std::move(path)), instances(instances) {};
+    class Service {
+    public:
+        Service(std::string name, std::filesystem::path path, const int instances, bool active = false):
+                name(std::move(name)), path(std::move(path)), instances(instances), active(active) {};
 
         ~Service() = default;
 
@@ -18,11 +19,12 @@ namespace loader {
         [[nodiscard]] std::string getName() const { return name; };
         [[nodiscard]] int getInstances() const { return instances; };
         [[nodiscard]] bool isActive() const { return active; };
-        private:
-            bool active;
-            std::string name;
-            std::filesystem::path path;
-            int instances;
+        
+    private:
+        std::string name;
+        std::filesystem::path path;
+        int instances;
+        bool active;
     };
 } // loader
 

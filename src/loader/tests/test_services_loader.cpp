@@ -64,8 +64,8 @@ protected:
 
 TEST_F(ServicesLoaderTest, LoadsValidServicesSuccessfully) {
     createValidServicesJson();
-    
-    Services serviceLoader(validJsonPath);
+
+    const Services serviceLoader(validJsonPath);
     
     EXPECT_EQ(serviceLoader.getServiceCount(), 2);
     EXPECT_FALSE(serviceLoader.isEmpty());
@@ -97,6 +97,114 @@ TEST_F(ServicesLoaderTest, FindsServiceByName) {
     
     auto* notFound = serviceLoader.findServiceByName("non-existent");
     EXPECT_EQ(notFound, nullptr);
+}
+
+// Test for the bug we just fixed - parsing instances field correctly
+TEST_F(ServicesLoaderTest, ParsesInstancesFieldCorrectly) {
+    auto testJsonPath = testDir / "instances_test.json";
+    std::ofstream file(testJsonPath);
+    file << R"([
+        {
+            "name": "single-instance",
+            "path": "./services/single",
+            "instances": 1,
+            "active": true
+        },
+        {
+            "name": "multi-instance",
+            "path": "./services/multi", 
+            "instances": 10,
+            "active": false
+        },
+        {
+            "name": "zero-instances",
+            "path": "./services/zero",
+            "instances": 0,
+            "active": true
+        }
+    ])";
+    file.close();
+    
+    Services serviceLoader(testJsonPath);
+    
+    EXPECT_EQ(serviceLoader.getServiceCount(), 3);
+    
+    auto* singleService = serviceLoader.findServiceByName("single-instance");
+    ASSERT_NE(singleService, nullptr);
+    EXPECT_EQ(singleService->getInstances(), 1);
+    EXPECT_TRUE(singleService->isActive());
+    
+    auto* multiService = serviceLoader.findServiceByName("multi-instance");
+    ASSERT_NE(multiService, nullptr);
+    EXPECT_EQ(multiService->getInstances(), 10);  // This was the bug - always returned 1
+    EXPECT_FALSE(multiService->isActive());
+    
+    auto* zeroService = serviceLoader.findServiceByName("zero-instances");  
+    ASSERT_NE(zeroService, nullptr);
+    EXPECT_EQ(zeroService->getInstances(), 0);
+    EXPECT_TRUE(zeroService->isActive());
+}
+
+// Test default values when fields are missing
+TEST_F(ServicesLoaderTest, HandlesDefaultValuesCorrectly) {
+    auto testJsonPath = testDir / "defaults_test.json";
+    std::ofstream file(testJsonPath);
+    file << R"([
+        {
+            "name": "minimal-service",
+            "path": "./services/minimal",
+            "instances": 1
+        },
+        {
+            "name": "partial-service",
+            "path": "./services/partial",
+            "instances": 5
+        }
+    ])";
+    file.close();
+    
+    Services serviceLoader(testJsonPath);
+    
+    auto* minimalService = serviceLoader.findServiceByName("minimal-service");
+    ASSERT_NE(minimalService, nullptr);
+    EXPECT_EQ(minimalService->getInstances(), 1);  // Specified value
+    EXPECT_FALSE(minimalService->isActive());     // Default value (active field missing)
+    
+    auto* partialService = serviceLoader.findServiceByName("partial-service");
+    ASSERT_NE(partialService, nullptr);
+    EXPECT_EQ(partialService->getInstances(), 5);  // Specified value
+    EXPECT_FALSE(partialService->isActive());      // Default value (active field missing)
+}
+
+// Test edge cases with boolean parsing
+TEST_F(ServicesLoaderTest, ParsesBooleanFieldsCorrectly) {
+    auto testJsonPath = testDir / "boolean_test.json";
+    std::ofstream file(testJsonPath);
+    file << R"([
+        {
+            "name": "active-service",
+            "path": "./services/active",
+            "instances": 1,
+            "active": true
+        },
+        {
+            "name": "inactive-service", 
+            "path": "./services/inactive",
+            "instances": 2,
+            "active": false
+        }
+    ])";
+    file.close();
+    
+    Services serviceLoader(testJsonPath);
+    
+    auto* activeService = serviceLoader.findServiceByName("active-service");
+    ASSERT_NE(activeService, nullptr);
+    EXPECT_TRUE(activeService->isActive());
+    
+    auto* inactiveService = serviceLoader.findServiceByName("inactive-service");
+    ASSERT_NE(inactiveService, nullptr);
+    EXPECT_FALSE(inactiveService->isActive());
 }
 
 TEST_F(ServicesLoaderTest, ThrowsOnNonExistentFile) {
