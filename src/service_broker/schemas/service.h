@@ -3,7 +3,7 @@
 
 #include <string>
 
-namespace loader::schemas {
+namespace servicebroker::schemas {
 
     // Function to generate the service properties schema (DRY approach)
     inline std::string getServicePropertiesJson() {
@@ -66,6 +66,6 @@ namespace loader::schemas {
         "maxItems": 50
     })";
 
-} // namespace loader::schemas
+} // namespace servicebroker::schemas
 
 #endif // RDWS_US_SERVICE_SCHEMA_H

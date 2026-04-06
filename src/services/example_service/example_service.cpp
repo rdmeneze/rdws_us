@@ -1,240 +1,142 @@
 //
-// Example Service Application
-// This demonstrates how a service should interact with the ServiceLoader
+// Example Service - ServiceBroker Architecture v2.0
+// Demonstrates service creation using ServiceClient library
 //
 
+#include "../../service_broker/Services/ServiceClient.h"
 #include <iostream>
 #include <string>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 #include <signal.h>
 #include <thread>
 #include <chrono>
-#include <cstring>
+#include <random>
+
+using namespace servicebroker;
 
 class ExampleService {
 private:
-    std::string serviceId;
-    int instanceId;
-    std::string endpoint;
-    bool running = false;
+    ServiceIdentity identity;
+    std::unique_ptr<ServiceClient> client;
+    std::string brokerAddress;
     bool developmentMode = false;
-    int serverSocket = -1;
+    std::atomic<bool> running{false};
     
 public:
-    ExampleService(const std::string& id, int instance, const std::string& ep, bool devMode = false) 
-        : serviceId(id), instanceId(instance), endpoint(ep), developmentMode(devMode) {}
-    
-    bool performHandshake() {
-        std::cout << "[" << serviceId << "] Attempting handshake with loader at " << endpoint << std::endl;
+    ExampleService(const std::string& serviceId, const std::string& machineName, 
+                   bool devMode = false, const std::string& broker = "unix:///tmp/service_broker.sock")
+        : developmentMode(devMode), brokerAddress(broker) {
         
-        int socketFd = socket(AF_UNIX, SOCK_STREAM, 0);
-        if (socketFd == -1) {
-            std::cerr << "[" << serviceId << "] Failed to create socket for handshake" << std::endl;
-            return false;
-        }
-        
-        struct sockaddr_un addr;
-        memset(&addr, 0, sizeof(addr));
-        addr.sun_family = AF_UNIX;
-        strncpy(addr.sun_path, endpoint.c_str(), sizeof(addr.sun_path) - 1);
-        
-        // Retry connection a few times (loader might not be ready immediately)
-        for (int i = 0; i < 5; ++i) {
-            if (connect(socketFd, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
-                break;
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-            if (i == 4) {
-                std::cerr << "[" << serviceId << "] Failed to connect to loader" << std::endl;
-                close(socketFd);
-                return false;
-            }
-        }
-        
-        // Send READY message
-        std::string readyMessage = "READY:" + serviceId;
-        if (send(socketFd, readyMessage.c_str(), readyMessage.length(), 0) == -1) {
-            std::cerr << "[" << serviceId << "] Failed to send READY message" << std::endl;
-            close(socketFd);
-            return false;
-        }
-        
-        // Wait for ACK
-        char buffer[256];
-        ssize_t bytesRead = recv(socketFd, buffer, sizeof(buffer) - 1, 0);
-        if (bytesRead > 0) {
-            buffer[bytesRead] = '\0';
-            std::string response(buffer);
-            
-            if (response == "ACK:" + serviceId) {
-                std::cout << "[" << serviceId << "] Handshake successful!" << std::endl;
-                close(socketFd);
-                return true;
-            } else {
-                std::cerr << "[" << serviceId << "] Invalid ACK message: " << response << std::endl;
-            }
-        } else {
-            std::cerr << "[" << serviceId << "] Failed to read ACK message" << std::endl;
-        }
-        
-        close(socketFd);
-        return false;
+        // Setup service identity
+        identity.machineName = machineName;
+        identity.serviceName = "example_service";
+        identity.serviceId = serviceId;
+        identity.version = "v2.0.0";
+        identity.environment = devMode ? "dev" : "prod";
+        identity.maxConcurrent = 10;
+        identity.capabilities = {"ping", "echo", "status", "info", "math"};
     }
     
-    void run() {
-        running = true;
+    bool initialize() {
+        std::cout << "[" << identity.serviceId << "] Initializing service..." << std::endl;
+        
+        client = std::make_unique<ServiceClient>(identity, brokerAddress);
+        
+        client->setRequestHandler([this](const Json::Value& request) -> Json::Value {
+            return this->processRequest(request);
+        });
         
         if (developmentMode) {
-            std::cout << "[" << serviceId << "] Running in DEVELOPMENT mode (instance " << instanceId << ")" << std::endl;
-            runDevelopmentMode();
-        } else {
-            std::cout << "[" << serviceId << "] Service running (instance " << instanceId << ")" << std::endl;
-            runProductionMode();
-        }
-        
-        std::cout << "[" << serviceId << "] Service stopped" << std::endl;
-    }
-    
-private:
-    void runProductionMode() {
-        int counter = 0;
-        while (running) {
-            std::cout << "[" << serviceId << "] Working... counter=" << counter++ << std::endl;
-            std::this_thread::sleep_for(std::chrono::seconds(2));
-        }
-    }
-    
-    void runDevelopmentMode() {
-        if (!setupDevelopmentSocket()) {
-            return;
-        }
-        
-        std::cout << "[" << serviceId << "] Ready to accept connections at " << endpoint << std::endl;
-        std::cout << "[" << serviceId << "] 🐛 DEBUG MODE: Use service_test_harness to connect!" << std::endl;
-        
-        while (running) {
-            acceptConnection();
-        }
-        
-        cleanupDevelopmentSocket();
-    }
-    
-    bool setupDevelopmentSocket() {
-        // Remove existing socket file if it exists
-        unlink(endpoint.c_str());
-        
-        serverSocket = socket(AF_UNIX, SOCK_STREAM, 0);
-        if (serverSocket == -1) {
-            std::cerr << "[" << serviceId << "] Failed to create server socket" << std::endl;
-            return false;
-        }
-        
-        struct sockaddr_un addr;
-        memset(&addr, 0, sizeof(addr));
-        addr.sun_family = AF_UNIX;
-        strncpy(addr.sun_path, endpoint.c_str(), sizeof(addr.sun_path) - 1);
-        
-        if (bind(serverSocket, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-            std::cerr << "[" << serviceId << "] Failed to bind socket: " << strerror(errno) << std::endl;
-            close(serverSocket);
-            return false;
-        }
-        
-        if (listen(serverSocket, 5) == -1) {
-            std::cerr << "[" << serviceId << "] Failed to listen on socket" << std::endl;
-            close(serverSocket);
-            return false;
+            std::cout << "[" << identity.serviceId << "] Debug mode enabled" << std::endl;
         }
         
         return true;
     }
     
-    void acceptConnection() {
-        struct sockaddr_un clientAddr;
-        socklen_t clientLen = sizeof(clientAddr);
+    void run() {
+        running.store(true);
         
-        int clientSocket = accept(serverSocket, (struct sockaddr*)&clientAddr, &clientLen);
-        if (clientSocket == -1) {
-            if (running) { // Only log if we're still supposed to be running
-                std::cerr << "[" << serviceId << "] Failed to accept connection" << std::endl;
-            }
-            return;
+        std::cout << "[" << identity.serviceId << "] Starting service..." << std::endl;
+        std::cout << "[" << identity.serviceId << "] Machine: " << identity.machineName << std::endl;
+        std::cout << "[" << identity.serviceId << "] Version: " << identity.version << std::endl;
+        std::cout << "[" << identity.serviceId << "] Capabilities: ";
+        
+        for (size_t i = 0; i < identity.capabilities.size(); ++i) {
+            std::cout << identity.capabilities[i];
+            if (i < identity.capabilities.size() - 1) std::cout << ", ";
         }
+        std::cout << std::endl;
+        std::cout << "[" << identity.serviceId << "] Broker: " << brokerAddress << std::endl;
         
-        std::cout << "[" << serviceId << "] Client connected" << std::endl;
+        client->run();
         
-        // Handle client in separate thread to allow multiple connections
-        std::thread clientThread(&ExampleService::handleClient, this, clientSocket);
-        clientThread.detach();
+        std::cout << "[" << identity.serviceId << "] Service stopped" << std::endl;
     }
-    
-    void handleClient(int clientSocket) {
-        char buffer[1024];
-        
-        while (running) {
-            ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
-            
-            if (bytesRead <= 0) {
-                break; // Client disconnected or error
-            }
-            
-            buffer[bytesRead] = '\0';
-            std::string request(buffer);
-            
-            std::cout << "[" << serviceId << "] Received: " << request << std::endl;
-            
-            // Process the request and generate response
-            std::string response = processRequest(request);
-            
-            if (send(clientSocket, response.c_str(), response.length(), 0) == -1) {
-                std::cerr << "[" << serviceId << "] Failed to send response" << std::endl;
-                break;
-            }
-            
-            std::cout << "[" << serviceId << "] Sent: " << response << std::endl;
-        }
-        
-        close(clientSocket);
-        std::cout << "[" << serviceId << "] Client disconnected" << std::endl;
-    }
-    
-    std::string processRequest(const std::string& request) {
-        // TODO: Implement actual service logic here
-        
-        if (request == "PING") {
-            return "PONG";
-        } else if (request == "STATUS") {
-            return "RUNNING";
-        } else if (request == "INFO") {
-            return "Service:" + serviceId + ",Instance:" + std::to_string(instanceId);
-        } else if (request.starts_with("ECHO ")) {
-            return "ECHO_RESPONSE:" + request.substr(5);
-        } else {
-            return "UNKNOWN_COMMAND:" + request;
-        }
-    }
-    
-    void cleanupDevelopmentSocket() {
-        if (serverSocket != -1) {
-            close(serverSocket);
-            serverSocket = -1;
-        }
-        unlink(endpoint.c_str());
-    }
-    
-public:
     
     void shutdown() {
-        std::cout << "[" << serviceId << "] Received shutdown signal" << std::endl;
-        running = false;
+        std::cout << "[" << identity.serviceId << "] Shutdown requested" << std::endl;
+        running.store(false);
         
-        if (developmentMode && serverSocket != -1) {
-            // Close server socket to unblock accept()
-            close(serverSocket);
-            serverSocket = -1;
+        if (client) {
+            client->stop();
         }
+    }
+    
+private:
+    Json::Value processRequest(const Json::Value& request) {
+        std::string command = request.get("command", "").asString();
+        
+        std::cout << "[" << identity.serviceId << "] Processing: " << command << std::endl;
+        
+        Json::Value response;
+        response["serviceId"] = identity.serviceId;
+        response["timestamp"] = static_cast<Json::Int64>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count());
+        
+        if (command == "ping") {
+            response["result"] = "pong";
+            response["status"] = "success";
+            
+        } else if (command == "status") {
+            response["result"] = "running";
+            response["status"] = "success";
+            response["uptime"] = static_cast<Json::Int64>(identity.getUptime().count());
+            response["load"] = static_cast<Json::Int64>(identity.currentLoad);
+            
+        } else if (command == "info") {
+            response["result"] = Json::Value();
+            response["result"]["service"] = identity.serviceName;
+            response["result"]["id"] = identity.serviceId;
+            response["result"]["machine"] = identity.machineName;
+            response["result"]["version"] = identity.version;
+            response["result"]["environment"] = identity.environment;
+            response["result"]["capabilities"] = Json::Value(Json::arrayValue);
+            for (const auto& cap : identity.capabilities) {
+                response["result"]["capabilities"].append(cap);
+            }
+            response["status"] = "success";
+            
+        } else if (command == "echo") {
+            std::string message = request.get("message", "").asString();
+            response["result"] = "echo: " + message;
+            response["status"] = "success";
+            
+        } else {
+            response["error"] = "Unknown command: " + command;
+            response["status"] = "error";
+            response["availableCommands"] = Json::Value(Json::arrayValue);
+            response["availableCommands"].append("ping");
+            response["availableCommands"].append("status");
+            response["availableCommands"].append("info");
+            response["availableCommands"].append("echo");
+        }
+        
+        // Simulate processing time
+        std::this_thread::sleep_for(std::chrono::milliseconds(10 + (rand() % 50)));
+        
+        std::cout << "[" << identity.serviceId << "] Response: " << response["status"].asString() << std::endl;
+        
+        return response;
     }
 };
 
@@ -242,66 +144,55 @@ public:
 ExampleService* globalService = nullptr;
 
 void signalHandler(int signal) {
-    if (globalService && signal == SIGTERM) {
+    if (globalService && (signal == SIGTERM || signal == SIGINT)) {
         globalService->shutdown();
     }
 }
 
 int main(int argc, char* argv[]) {
     bool developmentMode = false;
+    std::string brokerAddress = "unix:///tmp/service_broker.sock";
+    std::string serviceId = "example_001";
+    std::string machineName = "localhost";
     
-    // Check for development mode flag
-    if (argc == 2 && std::string(argv[1]) == "--dev") {
+    // Parse arguments
+    if (argc >= 2 && std::string(argv[1]) == "--dev") {
         developmentMode = true;
+        serviceId = "example_dev";
+        machineName = "dev-machine";
+        
         std::cout << "=== DEVELOPMENT MODE ===" << std::endl;
-        std::cout << "Service will run standalone for debugging" << std::endl;
+        std::cout << "Connect to broker for debugging" << std::endl;
         std::cout << "========================" << std::endl;
-    }
-    
-    if (!developmentMode && argc != 4) {
-        std::cerr << "Usage: " << std::endl;
-        std::cerr << "  Production:  " << argv[0] << " <service_id> <instance_id> <endpoint>" << std::endl;
+        
+    } else if (argc >= 4) {
+        serviceId = argv[1];
+        machineName = argv[2];
+        brokerAddress = argv[3];
+        
+    } else if (argc != 1) {
+        std::cerr << "Usage:" << std::endl;
         std::cerr << "  Development: " << argv[0] << " --dev" << std::endl;
+        std::cerr << "  Production:  " << argv[0] << " <serviceId> <machineName> <brokerAddress>" << std::endl;
+        std::cerr << "  Default:     " << argv[0] << std::endl;
         return 1;
     }
     
-    std::string serviceId;
-    int instanceId;
-    std::string endpoint;
+    std::cout << "[" << serviceId << "] Example Service v2.0 (ServiceBroker Architecture)" << std::endl;
     
-    if (developmentMode) {
-        serviceId = "example_service_dev";
-        instanceId = 0;
-        endpoint = "/tmp/example_service_dev.sock";
-        std::cout << "Development config:" << std::endl;
-        std::cout << "  Service ID: " << serviceId << std::endl;
-        std::cout << "  Endpoint: " << endpoint << std::endl;
-    } else {
-        serviceId = argv[1];
-        instanceId = std::stoi(argv[2]);
-        endpoint = argv[3];
-    }
-    
-    std::cout << "[" << serviceId << "] Starting service with instance " << instanceId 
-              << " at " << endpoint << std::endl;
-    
-    ExampleService service(serviceId, instanceId, endpoint, developmentMode);
+    ExampleService service(serviceId, machineName, developmentMode, brokerAddress);
     globalService = &service;
     
-    // Setup signal handler for graceful shutdown
     signal(SIGTERM, signalHandler);
-    signal(SIGINT, signalHandler);  // Also handle Ctrl+C in dev mode
+    signal(SIGINT, signalHandler);
     
-    if (!developmentMode) {
-        // Perform handshake with loader (production mode only)
-        if (!service.performHandshake()) {
-            std::cerr << "[" << serviceId << "] Handshake failed, exiting" << std::endl;
-            return 1;
-        }
+    if (!service.initialize()) {
+        std::cerr << "[" << serviceId << "] Failed to initialize service" << std::endl;
+        return 1;
     }
     
-    // Run the service
     service.run();
     
+    std::cout << "[" << serviceId << "] Service exited gracefully" << std::endl;
     return 0;
 }

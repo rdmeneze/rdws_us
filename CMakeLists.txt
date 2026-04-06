@@ -32,7 +32,7 @@ add_subdirectory(src/shared)
 
 # --- Subprojetos ---
 add_subdirectory(src/greeting_app)
-add_subdirectory(src/loader)
+add_subdirectory(src/service_broker)
 
 # --- Services ---
 add_subdirectory(src/services)

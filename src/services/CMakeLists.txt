@@ -4,12 +4,6 @@
 # Add all service subdirectories
 add_subdirectory(example_service)
 
-# Create service test harness
-add_executable(service_test_harness service_test_harness.cpp)
-set_target_properties(service_test_harness PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-)
-
 # Create services output directory
 set(SERVICES_OUTPUT_DIR ${CMAKE_BINARY_DIR}/services)
 file(MAKE_DIRECTORY ${SERVICES_OUTPUT_DIR})

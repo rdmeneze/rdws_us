@@ -5,7 +5,7 @@
 #include "schemas/service.h"
 
 using namespace rdws::validation;
-using namespace loader::schemas;
+using namespace servicebroker::schemas;
 
 class ServiceSchemaTest : public ::testing::Test {
 protected:
