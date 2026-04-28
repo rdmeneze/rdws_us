@@ -15,9 +15,19 @@ set(valijson_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(valijson_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(valijson EXCLUDE_FROM_ALL)
 
+# Build bundled jsoncpp from valijson thirdparty sources
+add_library(jsoncpp_bundled STATIC
+    valijson/thirdparty/jsoncpp/src/lib_json/json_reader.cpp
+    valijson/thirdparty/jsoncpp/src/lib_json/json_value.cpp
+    valijson/thirdparty/jsoncpp/src/lib_json/json_writer.cpp
+)
+target_include_directories(jsoncpp_bundled SYSTEM PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/valijson/thirdparty/jsoncpp/include
+)
+
 # Create wrapper library for ValiJSON with proper configuration
 add_library(valijson_wrapper INTERFACE)
-target_link_libraries(valijson_wrapper INTERFACE ValiJSON::valijson)
+target_link_libraries(valijson_wrapper INTERFACE ValiJSON::valijson jsoncpp_bundled)
 target_include_directories(valijson_wrapper INTERFACE 
     ${CMAKE_CURRENT_SOURCE_DIR}/valijson/include
 )

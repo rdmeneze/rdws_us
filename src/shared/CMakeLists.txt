@@ -15,17 +15,7 @@ target_link_libraries(rdws_shared_validation PUBLIC
     valijson_wrapper
 )
 
-# Required for jsoncpp (used by valijson adapters)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(JSONCPP jsoncpp)
-
-if(JSONCPP_FOUND)
-    target_link_libraries(rdws_shared_validation PUBLIC ${JSONCPP_LIBRARIES})
-    target_include_directories(rdws_shared_validation PUBLIC ${JSONCPP_INCLUDE_DIRS})
-    target_compile_options(rdws_shared_validation PUBLIC ${JSONCPP_CFLAGS_OTHER})
-else()
-    message(WARNING "jsoncpp not found via pkg-config, validation may not work correctly")
-endif()
+# jsoncpp is provided via valijson_wrapper (bundled)
 
 
 add_library(rdws_shared_config 

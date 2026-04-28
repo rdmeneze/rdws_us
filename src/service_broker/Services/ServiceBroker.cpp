@@ -180,13 +180,8 @@ void ServiceBroker::startHealthChecker() {
 
 void ServiceBroker::handleNewConnection(int clientFd, const std::string& address, const std::string& type) {
     std::lock_guard<std::mutex> lock(connectionsMutex);
-    
-    ClientConnection conn;
-    conn.socketFd = clientFd;
-    conn.address = address;
-    conn.connectionType = type;
-    
-    activeConnections[clientFd] = conn;
+        
+    activeConnections[clientFd] = {.socketFd = clientFd, .address = address, .connectionType = type};
     
     std::cout << "New " << type << " connection from " << address << " (fd: " << clientFd << ")" << std::endl;
     
