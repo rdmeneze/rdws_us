@@ -2,6 +2,20 @@ cmake_minimum_required(VERSION 3.16)
 
 project(rdws_us VERSION 0.1.0 LANGUAGES C CXX)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+option(ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
+
+if(ENABLE_CLANG_TIDY)
+  find_program(CLANG_TIDY_EXE NAMES clang-tidy)
+  if(CLANG_TIDY_EXE)
+    set(CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY_EXE})
+    message(STATUS "clang-tidy enabled: ${CLANG_TIDY_EXE}")
+  else()
+    message(WARNING "ENABLE_CLANG_TIDY is ON, but clang-tidy was not found")
+  endif()
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_EXTENSIONS ON)
 

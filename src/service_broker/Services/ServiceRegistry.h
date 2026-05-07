@@ -80,7 +80,7 @@ public:
     void pingService(const std::string& serviceId);
     
     // Custom filtering
-    std::vector<std::string> findServices(std::function<bool(const ServiceIdentity&)> predicate) const;
+    std::vector<std::string> findServices(const std::function<bool(const ServiceIdentity&)>& predicate) const;
 };
 
 } // namespace servicebroker

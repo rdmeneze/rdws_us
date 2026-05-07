@@ -36,14 +36,14 @@ public:
     [[nodiscard]] bool isRegistered() const { return registered.load(); }
     
     // Service registration
-    bool registerService();
+    bool registerService() const;
     
     // Request handling
     void setRequestHandler(const RequestHandler &handler);
     
     // Communication
     bool sendPing(const Json::Value& stats = Json::Value());
-    bool sendResponse(const std::string& requestId, const Json::Value& response);
+    bool sendResponse(const std::string& requestId, const Json::Value& response) const;
     
     // Main event loop
     void run();

@@ -52,7 +52,7 @@ void ServiceClient::disconnect() {
     std::cout << "Disconnected from broker" << std::endl;
 }
 
-bool ServiceClient::registerService() {
+bool ServiceClient::registerService() const {
     if (!connected.load()) {
         std::cerr << "Not connected to broker" << std::endl;
         return false;
@@ -93,7 +93,7 @@ bool ServiceClient::sendPing(const Json::Value& stats) {
     return sendMessage(pingMessage);
 }
 
-bool ServiceClient::sendResponse(const std::string& requestId, const Json::Value& response) {
+bool ServiceClient::sendResponse(const std::string& requestId, const Json::Value& response) const {
     if (!connected.load()) {
         return false;
     }
@@ -257,7 +257,7 @@ void ServiceClient::handleMessage(const std::string& message) {
             return;
         }
 
-        if (std::string messageType = jsonMessage["type"].asString(); messageType == "ACKNOWLEDGED") {
+        if (const std::string messageType = jsonMessage["type"].asString(); messageType == "ACKNOWLEDGED") {
             registered.store(true);
             std::cout << "Service registered successfully: " << jsonMessage["serviceId"].asString() << std::endl;
         } else if (messageType == "REQUEST") {
@@ -289,7 +289,7 @@ void ServiceClient::handleRequest(const Json::Value& message) {
         const Json::Value response = requestHandler(requestData);
         
         // Send response back to broker
-        sendResponse(requestId, response);
+        (void)sendResponse(requestId, response);
         
         // Update stats
         identity.totalRequests++;
@@ -301,7 +301,7 @@ void ServiceClient::handleRequest(const Json::Value& message) {
         // Send error response
         Json::Value errorResponse;
         errorResponse["error"] = e.what();
-        sendResponse(requestId, errorResponse);
+        (void)sendResponse(requestId, errorResponse);
         
         // Update error count
         identity.errorCount++;
