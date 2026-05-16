@@ -44,7 +44,10 @@ endif()
 
 
 # --- Third-party ---
+# NOTE: src/third_party forces BUILD_TESTING OFF (to suppress third-party tests).
+# Restore it so our own test subdirectories are included.
 add_subdirectory(src/third_party)
+set(BUILD_TESTING ON CACHE BOOL "" FORCE)
 
 # --- Shared Components ---
 add_subdirectory(src/shared)

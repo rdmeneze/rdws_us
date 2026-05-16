@@ -13,3 +13,14 @@ endif()
 
 include(GoogleTest)
 gtest_discover_tests(service_gateway_test)
+
+# --- ServiceGateway metrics / health endpoint tests ---
+add_executable(service_gateway_metrics_test
+        test_gateway_metrics.cpp
+)
+target_link_libraries(service_gateway_metrics_test PRIVATE
+    service_gateway_core
+    gtest_main
+    gtest
+)
+gtest_discover_tests(service_gateway_metrics_test)
