@@ -75,6 +75,10 @@ void HttpGateway::registerRoutes()
                     std::chrono::steady_clock::now() - t0).count();
                 rdws::logger::httpResponse(requestId.empty() ? "-" : requestId,
                                            capability, status, latencyMs);
+                gateway_.recordMetric(capability,
+                                      static_cast<double>(latencyMs),
+                                      status < 400,
+                                      status == 504);
                 response.status = status;
                 response.set_content(body, "application/json");
             };
@@ -107,6 +111,22 @@ void HttpGateway::registerRoutes()
             const rapidjson::Document status = gateway_.getBrokerStatus();
             response.status = 200;
             response.set_content(documentToString(status), "application/json");
+            return httplib::Server::HandlerResponse::Handled;
+        }
+
+        if (request.method == "GET" && request.path == "/metrics") {
+            const rapidjson::Document metrics = gateway_.getMetrics();
+            response.status = 200;
+            response.set_content(documentToString(metrics), "application/json");
+            return httplib::Server::HandlerResponse::Handled;
+        }
+
+        if (request.method == "GET" && request.path == "/health") {
+            const rapidjson::Document health = gateway_.getHealth();
+            const bool healthy = health.HasMember("status") &&
+                                 std::string(health["status"].GetString()) == "healthy";
+            response.status = healthy ? 200 : 503;
+            response.set_content(documentToString(health), "application/json");
             return httplib::Server::HandlerResponse::Handled;
         }
 

@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <cmath>
 #include <cstring>
 #include <iostream>
 #include <ranges>
@@ -695,6 +696,104 @@ namespace servicegateway
     {
         std::lock_guard lock(requestsMutex);
         return pendingRequests.size();
+    }
+
+    void ServiceGateway::recordMetric(const std::string &capability,
+                                      const double latencyMs,
+                                      const bool success,
+                                      const bool timedOut)
+    {
+        metrics_.record(capability, latencyMs, success, timedOut);
+    }
+
+    rapidjson::Document ServiceGateway::getMetrics() const
+    {
+        return metrics_.toJson();
+    }
+
+    rapidjson::Document ServiceGateway::getHealth() const
+    {
+        rapidjson::Document doc;
+        doc.SetObject();
+        auto &alloc = doc.GetAllocator();
+
+        const auto uptimeSec = std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+
+        doc.AddMember("status", running.load() ? "healthy" : "stopped", alloc);
+        doc.AddMember("uptimeEpochSec", static_cast<int64_t>(uptimeSec), alloc);
+
+        // Gateway config
+        rapidjson::Value gw(rapidjson::kObjectType);
+        gw.AddMember("tcpPort",     tcpPort, alloc);
+        gw.AddMember("unixSocket",  rapidjson::Value(unixSocketPath.c_str(), alloc), alloc);
+        gw.AddMember("activeConnections", static_cast<int>(getActiveConnectionCount()), alloc);
+        gw.AddMember("pendingRequests",   static_cast<int>(getTrackedRequestCount()),   alloc);
+        doc.AddMember("gateway", gw, alloc);
+
+        // Services
+        rapidjson::Document registryDoc = registry.getRegistryStatus();
+        rapidjson::Value services(rapidjson::kArrayType);
+
+        if (registryDoc.HasMember("services") && registryDoc["services"].IsArray()) {
+            // Merge registry info with per-capability metrics
+            rapidjson::Document metricsDoc = metrics_.toJson();
+
+            // Build a quick lookup: capability -> avgLatencyMs, errorRate
+            std::map<std::string, rapidjson::Value *> capMetrics;
+            if (metricsDoc.HasMember("capabilities") && metricsDoc["capabilities"].IsArray()) {
+                for (auto &entry : metricsDoc["capabilities"].GetArray()) {
+                    if (entry.HasMember("capability") && entry["capability"].IsString()) {
+                        capMetrics[entry["capability"].GetString()] = &entry;
+                    }
+                }
+            }
+
+            for (const auto &svc : registryDoc["services"].GetArray()) {
+                rapidjson::Value entry(rapidjson::kObjectType);
+
+                // Copy core identity fields
+                for (const auto &m : {"serviceId", "serviceName", "machineName", "version"}) {
+                    if (svc.HasMember(m)) {
+                        rapidjson::Value key(m, alloc);
+                        rapidjson::Value val;
+                        val.CopyFrom(svc[m], alloc);
+                        entry.AddMember(key, val, alloc);
+                    }
+                }
+
+                // Derive per-service aggregate metrics from its capabilities
+                double totalAvg = 0.0;
+                double totalErrorRate = 0.0;
+                int    capCount = 0;
+
+                if (svc.HasMember("capabilities") && svc["capabilities"].IsArray()) {
+                    rapidjson::Value caps;
+                    caps.CopyFrom(svc["capabilities"], alloc);
+                    entry.AddMember("capabilities", caps, alloc);
+
+                    for (const auto &capVal : svc["capabilities"].GetArray()) {
+                        const std::string cap = capVal.GetString();
+                        if (capMetrics.count(cap)) {
+                            const auto *cm = capMetrics.at(cap);
+                            if (cm->HasMember("avgLatencyMs")) totalAvg       += (*cm)["avgLatencyMs"].GetDouble();
+                            if (cm->HasMember("errorRate"))    totalErrorRate  += (*cm)["errorRate"].GetDouble();
+                            capCount++;
+                        }
+                    }
+                }
+
+                if (capCount > 0) {
+                    entry.AddMember("avgLatencyMs", std::round(totalAvg / capCount * 100.0) / 100.0, alloc);
+                    entry.AddMember("errorRate",    std::round(totalErrorRate / capCount * 10000.0) / 10000.0, alloc);
+                }
+
+                services.PushBack(entry, alloc);
+            }
+        }
+        doc.AddMember("services", services, alloc);
+
+        return doc;
     }
 
     rapidjson::Document ServiceGateway::getRequestStatus(const std::string &requestId) const

@@ -32,6 +32,7 @@ target_link_libraries(service_gateway_core PUBLIC
     rdws_shared_validation
     rdws_shared_config
     rdws_shared_logger
+    rdws_shared_utils
 )
 
 add_executable(service_gateway_http

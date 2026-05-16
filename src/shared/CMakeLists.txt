@@ -52,6 +52,8 @@ target_link_libraries(rdws_shared_types PUBLIC
 add_library(rdws_shared_utils
     utils/lambda_params_helper.cpp
     utils/lambda_params_helper.h
+    utils/metrics.cpp
+    utils/metrics.h
 )
 
 target_include_directories(rdws_shared_utils PUBLIC

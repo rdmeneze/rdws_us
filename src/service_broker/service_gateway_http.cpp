@@ -84,6 +84,8 @@ int main(const int argc, char *argv[])
         std::cout << "  internal unix://" << unixSocket << '\n';
         std::cout << "  http://localhost:" << httpPort << " /invoke/{capability}" << '\n';
         std::cout << "  http://localhost:" << httpPort << " /status" << '\n';
+        std::cout << "  http://localhost:" << httpPort << " /health" << '\n';
+        std::cout << "  http://localhost:" << httpPort << " /metrics" << '\n';
         std::cout << "  http://localhost:" << httpPort << " /connections" << '\n';
 
         while (gateway.isRunning() || httpGateway.isRunning()) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ServiceRegistry.h"
+#include "../../shared/utils/metrics.h"
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -75,6 +76,9 @@ private:
     
     // Health check thread
     std::thread healthCheckThread;
+
+    // Per-capability metrics
+    rdws::metrics::MetricsTracker metrics_;
     
 public:
     explicit ServiceGateway(int port = 8080, std::string  unixSocket = "/tmp/service_gateway.sock");
@@ -111,6 +115,9 @@ public:
     // Monitoring and management
     rapidjson::Document getBrokerStatus() const;
     rapidjson::Document getConnectionStatus() const;
+    rapidjson::Document getMetrics() const;
+    rapidjson::Document getHealth() const;
+    void recordMetric(const std::string &capability, double latencyMs, bool success, bool timedOut = false);
     size_t getActiveConnectionCount() const;
     size_t getTrackedRequestCount() const;
     
