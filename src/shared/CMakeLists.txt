@@ -64,6 +64,20 @@ target_link_libraries(rdws_shared_utils PUBLIC
     rapidjson_wrapper
 )
 
+add_library(rdws_shared_logger
+    utils/logger.cpp
+    utils/logger.h
+)
+
+target_include_directories(rdws_shared_logger PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils
+)
+
+target_link_libraries(rdws_shared_logger PUBLIC
+    spdlog_wrapper
+)
+
 # --- Testes para shared components ---
 if(BUILD_TESTING)
     add_subdirectory(tests)

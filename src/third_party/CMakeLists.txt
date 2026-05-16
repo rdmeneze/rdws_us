@@ -67,3 +67,16 @@ add_library(httplib_wrapper INTERFACE)
 target_include_directories(httplib_wrapper INTERFACE
     ${httplib_SOURCE_DIR}
 )
+
+# spdlog (structured logging)
+FetchContent_Declare(
+    spdlog
+    GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    GIT_TAG v1.14.1
+)
+FetchContent_Populate(spdlog)
+
+add_library(spdlog_wrapper INTERFACE)
+target_include_directories(spdlog_wrapper INTERFACE
+    ${spdlog_SOURCE_DIR}/include
+)

@@ -11,6 +11,7 @@
 #include <utility>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#include "../../shared/utils/logger.h"
 
 namespace servicegateway
 {
@@ -330,6 +331,9 @@ namespace servicegateway
 
                 std::cout << "Service registered: " << identity.serviceId
                           << " (" << identity.serviceName << ")" << '\n';
+                rdws::logger::serviceConnected(identity.serviceId,
+                                               identity.serviceName,
+                                               identity.clientAddress);
                 return true;
             }
         }
@@ -464,6 +468,10 @@ namespace servicegateway
         if (waiterIt != responseWaiters_.end()) {
             waiterIt->second->notify_one();
         }
+
+        rdws::logger::responseCorrelated(requestId,
+                                         pending.targetServiceId,
+                                         requestStateToString(pending.state));
 
         return true;
     }
@@ -621,6 +629,7 @@ namespace servicegateway
             // Unregister service if it was identified
             if (it->second.identified && !it->second.serviceId.empty())
             {
+                rdws::logger::serviceDisconnected(it->second.serviceId, "connection closed");
                 registry.unregisterService(it->second.serviceId);
             }
 

@@ -5,6 +5,8 @@
 #include <iostream>
 #include <thread>
 
+#include "../shared/utils/logger.h"
+
 using namespace servicegateway;
 
 static ServiceGateway *g_serviceGateway = nullptr;
@@ -31,6 +33,7 @@ int main(const int argc, char *argv[])
     int brokerPort = 8080;
     int httpPort = 3001;
     std::string unixSocket = "/tmp/service_gateway.sock";
+    std::string logFile;   // empty = stdout only
 
     if (argc >= 2) {
         brokerPort = std::stoi(argv[1]);
@@ -41,11 +44,19 @@ int main(const int argc, char *argv[])
     if (argc >= 4) {
         unixSocket = argv[3];
     }
+    if (argc >= 5) {
+        logFile = argv[4];
+    }
 
     std::cout << "=== ServiceGateway HTTP Bridge ===\n";
     std::cout << "Broker port: " << brokerPort << '\n';
     std::cout << "HTTP port:   " << httpPort << '\n';
     std::cout << "UNIX socket: " << unixSocket << '\n';
+    if (!logFile.empty()) {
+        std::cout << "Log file:    " << logFile << '\n';
+    }
+
+    rdws::logger::init("rdws-gateway", "info", logFile);
 
     try {
         ServiceGateway gateway(brokerPort, unixSocket);

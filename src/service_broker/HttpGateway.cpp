@@ -12,6 +12,7 @@
 #include "../shared/types/lambda_context.h"
 #include "../shared/types/lambda_event.h"
 #include "../shared/types/service_result.h"
+#include "../shared/utils/logger.h"
 
 namespace servicegateway {
 
@@ -62,36 +63,43 @@ void HttpGateway::registerRoutes()
         const std::string capability = extractCapability(request.path).value_or("");
 
         if (request.method == "POST" && !capability.empty()) {
+            const auto t0 = std::chrono::steady_clock::now();
             const rapidjson::Document eventDocument = documentFromRequest(request, capability);
             const std::string requestId = gateway_.sendRequest(capability, eventDocument);
+
+            rdws::logger::httpRequest(requestId.empty() ? "-" : requestId,
+                                      capability, request.method, request.path);
+
+            auto respond = [&](int status, const std::string &body) {
+                const auto latencyMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - t0).count();
+                rdws::logger::httpResponse(requestId.empty() ? "-" : requestId,
+                                           capability, status, latencyMs);
+                response.status = status;
+                response.set_content(body, "application/json");
+            };
 
             if (requestId.empty()) {
                 const auto error = buildErrorResponse("No backend service is available for capability: " + capability,
                                                       503);
-                response.status = 503;
-                response.set_content(documentToString(error), "application/json");
+                respond(503, documentToString(error));
                 return httplib::Server::HandlerResponse::Handled;
             }
 
             const PendingRequest result = gateway_.waitForResponse(requestId);
 
             if (result.state == RequestState::TIMED_OUT) {
-                const auto error = buildErrorResponse("Service response timed out", 504);
-                response.status = 504;
-                response.set_content(documentToString(error), "application/json");
+                respond(504, documentToString(buildErrorResponse("Service response timed out", 504)));
                 return httplib::Server::HandlerResponse::Handled;
             }
 
             if (result.state == RequestState::FAILED) {
-                const auto error = buildErrorResponse(
-                    result.errorMessage.empty() ? "Service returned an error" : result.errorMessage, 500);
-                response.status = 500;
-                response.set_content(documentToString(error), "application/json");
+                const auto msg = result.errorMessage.empty() ? "Service returned an error" : result.errorMessage;
+                respond(500, documentToString(buildErrorResponse(msg, 500)));
                 return httplib::Server::HandlerResponse::Handled;
             }
 
-            response.status = 200;
-            response.set_content(result.responsePayload, "application/json");
+            respond(200, result.responsePayload);
             return httplib::Server::HandlerResponse::Handled;
         }
 

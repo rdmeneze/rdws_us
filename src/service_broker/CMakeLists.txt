@@ -31,6 +31,7 @@ target_link_libraries(service_gateway_core PUBLIC
     ValiJSON::valijson
     rdws_shared_validation
     rdws_shared_config
+    rdws_shared_logger
 )
 
 add_executable(service_gateway_http
@@ -44,6 +45,7 @@ add_executable(service_broker_http ALIAS service_gateway_http)
 target_link_libraries(service_gateway_http PRIVATE
     service_gateway_core
     rdws_shared_types
+    rdws_shared_logger
     httplib_wrapper
 )
 
