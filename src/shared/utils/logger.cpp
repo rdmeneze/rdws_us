@@ -1,13 +1,13 @@
 #include "logger.h"
 
 #include <chrono>
+#include <cstddef>
 #include <filesystem>
 #include <sstream>
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/rotating_file_sink.h>
-#include <spdlog/pattern_formatter.h>
 
 namespace rdws::logger {
 
@@ -60,8 +60,8 @@ std::string buildJson(std::string_view event,
                       std::initializer_list<std::string> fields)
 {
     std::ostringstream oss;
-    oss << "{\"ts\":\"" << utcNow()
-        << "\",\"event\":\"" << event << '"';
+    oss << R"({"ts":")" << utcNow()
+        << R"(","event":")" << event << '"';
     for (const auto &f : fields) {
         oss << ',' << f;
     }
@@ -99,7 +99,7 @@ void init(const std::string_view name, const std::string_view level,
         if (const auto parent = std::filesystem::path(logFile).parent_path(); !parent.empty()) {
             std::filesystem::create_directories(parent);
         }
-        constexpr std::size_t maxBytes = 10 * 1024 * 1024; // 10 MB
+        constexpr std::size_t maxBytes = static_cast<const std::size_t>(10 * 1024 * 1024); // 10 MB
         constexpr std::size_t maxFiles = 3;
         sinks.push_back(std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
             std::string(logFile), maxBytes, maxFiles));

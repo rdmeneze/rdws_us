@@ -3,6 +3,7 @@
 #include <random>
 #include <chrono>
 #include <iostream>
+#include <ranges>
 
 namespace servicegateway
 {
@@ -18,7 +19,7 @@ namespace servicegateway
         }
 
         // Check if service already exists
-        if (identities.find(identity.serviceId) != identities.end())
+        if (identities.contains(identity.serviceId))
         {
             std::cout << "Service " << identity.serviceId << " already registered, updating..." << '\n';
             return updateService(identity);
@@ -160,7 +161,7 @@ namespace servicegateway
         for (auto it = fst; it != snd; ++it)
         {
             const auto &serviceId = it->second;
-            if (auto it = identities.find(serviceId); it != identities.end() && it->second.isHealthy() && !it->second.isOverloaded())
+            if (auto serviceIt = identities.find(serviceId); serviceIt != identities.end() && serviceIt->second.isHealthy() && !serviceIt->second.isOverloaded())
             {
                 result.push_back(serviceId);
             }
@@ -258,7 +259,7 @@ namespace servicegateway
         std::lock_guard lock(registryMutex);
 
         std::vector<std::string> result;
-        for (const auto &[serviceId, identity] : identities)
+        for (const auto& serviceId : identities | std::views::keys)
         {
             result.push_back(serviceId);
         }
@@ -274,7 +275,7 @@ namespace servicegateway
         auto &allocator = status.GetAllocator();
 
         size_t healthyCount = 0;
-        for (const auto &[serviceId, identity] : identities)
+        for (const auto& identity : identities | std::views::values)
         {
             if (identity.isHealthy())
             {
@@ -286,7 +287,7 @@ namespace servicegateway
         status.AddMember("healthyServices", static_cast<int>(healthyCount), allocator);
 
         rapidjson::Value servicesArray(rapidjson::kArrayType);
-        for (const auto &[serviceId, identity] : identities)
+        for (const auto& identity : identities | std::views::values)
         {
             servicesArray.PushBack(identity.toJsonValue(allocator), allocator);
         }
@@ -300,7 +301,7 @@ namespace servicegateway
         std::lock_guard lock(registryMutex);
 
         std::vector<ServiceIdentity> result;
-        for (const auto &[serviceId, identity] : identities)
+        for (const auto& identity : identities | std::views::values)
         {
             result.push_back(identity);
         }

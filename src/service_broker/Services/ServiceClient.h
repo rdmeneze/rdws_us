@@ -26,7 +26,7 @@ private:
     
 public:
     explicit ServiceClient(ServiceIdentity  serviceIdentity,
-                          const std::string& address = "unix:///tmp/service_gateway.sock");
+                          std::string  address = "unix:///tmp/service_gateway.sock");
     ~ServiceClient();
     
     // Connection management
@@ -36,15 +36,15 @@ public:
     [[nodiscard]] bool isRegistered() const { return registered.load(); }
     
     // Service registration
-    bool registerService() const;
+    [[nodiscard]] bool registerService() const;
     
     // Request handling
     void setRequestHandler(const RequestHandler &handler);
     
     // Communication
     bool sendPing();
-    bool sendPing(const rapidjson::Document& stats);
-    bool sendResponse(const std::string& requestId, const rapidjson::Document& response) const;
+    bool sendPing(const rapidjson::Document& stats) const;
+    [[nodiscard]] bool sendResponse(const std::string& requestId, const rapidjson::Document& response) const;
     
     // Main event loop
     void run();

@@ -5,7 +5,6 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <iostream>
-#include <sstream>
 #include <thread>
 #include <utility>
 #include <rapidjson/stringbuffer.h>
@@ -13,8 +12,8 @@
 
 namespace servicegateway {
 
-ServiceClient::ServiceClient(ServiceIdentity  serviceIdentity, const std::string& address)
-    : identity(std::move(serviceIdentity)), gatewayAddress(address) {
+ServiceClient::ServiceClient(ServiceIdentity  serviceIdentity, std::string  address)
+    : identity(std::move(serviceIdentity)), gatewayAddress(std::move(address)) {
 }
 
 ServiceClient::~ServiceClient() {
@@ -28,12 +27,12 @@ bool ServiceClient::connect() {
     
     socketFd = createConnection();
     if (socketFd == -1) {
-        std::cerr << "Failed to create connection to " << gatewayAddress << std::endl;
+        std::cerr << "Failed to create connection to " << gatewayAddress << '\n';
         return false;
     }
     
     connected.store(true);
-    std::cout << "Connected to broker at " << gatewayAddress << std::endl;
+    std::cout << "Connected to broker at " << gatewayAddress << '\n';
     
     return true;
 }
@@ -51,12 +50,12 @@ void ServiceClient::disconnect() {
         socketFd = -1;
     }
     
-    std::cout << "Disconnected from broker" << std::endl;
+    std::cout << "Disconnected from broker" << '\n';
 }
 
 bool ServiceClient::registerService() const {
     if (!connected.load()) {
-        std::cerr << "Not connected to broker" << std::endl;
+        std::cerr << "Not connected to broker" << '\n';
         return false;
     }
     
@@ -67,7 +66,7 @@ bool ServiceClient::registerService() const {
     identifyMessage.AddMember("identity", identity.toJsonValue(allocator), allocator);
     
     if (sendMessage(identifyMessage)) {
-        std::cout << "Sent identification for service: " << identity.serviceId << std::endl;
+        std::cout << "Sent identification for service: " << identity.serviceId << '\n';
         return true;
     }
     
@@ -83,7 +82,7 @@ bool ServiceClient::sendPing() {
     return sendPing(empty);
 }
 
-bool ServiceClient::sendPing(const rapidjson::Document& stats) {
+bool ServiceClient::sendPing(const rapidjson::Document& stats) const {
     if (!connected.load()) {
         return false;
     }
@@ -138,27 +137,35 @@ void ServiceClient::run() {
     messageThread = std::thread(&ServiceClient::messageLoop, this);
     pingThread = std::thread(&ServiceClient::pingLoop, this);
     
-    std::cout << "Service client running for " << identity.serviceId << std::endl;
+    std::cout << "Service client running for " << identity.serviceId << '\n';
     
     // Wait for threads to finish
-    if (messageThread.joinable()) messageThread.join();
-    if (pingThread.joinable()) pingThread.join();
+    if (messageThread.joinable()) {
+        messageThread.join();
+    }
+    if (pingThread.joinable()) {
+        pingThread.join();
+    }
 }
 
 void ServiceClient::stop() {
     disconnect();
     
-    if (messageThread.joinable()) messageThread.join();
-    if (pingThread.joinable()) pingThread.join();
+    if (messageThread.joinable()) {
+        messageThread.join();
+    }
+    if (pingThread.joinable()) {
+        pingThread.join();
+    }
 }
 
 int ServiceClient::createConnection() const {
-    if (gatewayAddress.rfind("tcp://", 0) == 0) {
+    if (gatewayAddress.starts_with("tcp://")) {
         // TCP connection
         std::string address = gatewayAddress.substr(6); // Remove "tcp://"
         const size_t colonPos = address.find(':');
         if (colonPos == std::string::npos) {
-            std::cerr << "Invalid TCP address format" << std::endl;
+            std::cerr << "Invalid TCP address format" << '\n';
             return -1;
         }
 
@@ -167,7 +174,7 @@ int ServiceClient::createConnection() const {
 
         const int sockFd = socket(AF_INET, SOCK_STREAM, 0);
         if (sockFd == -1) {
-            std::cerr << "Failed to create TCP socket" << std::endl;
+            std::cerr << "Failed to create TCP socket" << '\n';
             return -1;
         }
 
@@ -176,13 +183,13 @@ int ServiceClient::createConnection() const {
         serverAddr.sin_port = htons(port);
         
         if (inet_pton(AF_INET, host.c_str(), &serverAddr.sin_addr) <= 0) {
-            std::cerr << "Invalid TCP address: " << host << std::endl;
+            std::cerr << "Invalid TCP address: " << host << '\n';
             close(sockFd);
             return -1;
         }
         
         if (::connect(sockFd, reinterpret_cast<struct sockaddr *>(&serverAddr), sizeof(serverAddr)) < 0) {
-            std::cerr << "Failed to connect to TCP " << host << ":" << port << std::endl;
+            std::cerr << "Failed to connect to TCP " << host << ":" << port << '\n';
             close(sockFd);
             return -1;
         }
@@ -190,13 +197,13 @@ int ServiceClient::createConnection() const {
         return sockFd;
         
     }
-    if (gatewayAddress.rfind("unix://", 0) == 0) {
+    if (gatewayAddress.starts_with("unix://")) {
         // UNIX socket connection
         const std::string socketPath = gatewayAddress.substr(7); // Remove "unix://"
 
         const int sockFd = socket(AF_UNIX, SOCK_STREAM, 0);
         if (sockFd == -1) {
-            std::cerr << "Failed to create UNIX socket" << std::endl;
+            std::cerr << "Failed to create UNIX socket" << '\n';
             return -1;
         }
 
@@ -205,7 +212,7 @@ int ServiceClient::createConnection() const {
         strncpy(serverAddr.sun_path, socketPath.c_str(), sizeof(serverAddr.sun_path) - 1);
         
         if (::connect(sockFd, reinterpret_cast<sockaddr *>(&serverAddr), sizeof(serverAddr)) < 0) {
-            std::cerr << "Failed to connect to UNIX socket " << socketPath << std::endl;
+            std::cerr << "Failed to connect to UNIX socket " << socketPath << '\n';
             close(sockFd);
             return -1;
         }
@@ -213,7 +220,7 @@ int ServiceClient::createConnection() const {
         return sockFd;
     }
 
-    std::cerr << "Unknown address format: " << gatewayAddress << std::endl;
+    std::cerr << "Unknown address format: " << gatewayAddress << '\n';
     return -1;
 }
 
@@ -228,7 +235,7 @@ bool ServiceClient::sendMessage(const rapidjson::Document& message) const {
     const std::string messageStr = buffer.GetString();
 
     const ssize_t sent = send(socketFd, messageStr.c_str(), messageStr.length(), MSG_NOSIGNAL);
-    return sent == static_cast<ssize_t>(messageStr.length());
+    return std::cmp_equal(sent ,messageStr.length());
 }
 
 void ServiceClient::messageLoop() {
@@ -238,7 +245,7 @@ void ServiceClient::messageLoop() {
         const ssize_t bytesRead = recv(socketFd, buffer, sizeof(buffer) - 1, 0);
         if (bytesRead <= 0) {
             if (connected.load()) {
-                std::cerr << "Connection lost to broker" << std::endl;
+                std::cerr << "Connection lost to broker" << '\n';
             }
             break;
         }
@@ -273,44 +280,44 @@ void ServiceClient::handleMessage(const std::string& message) {
         jsonMessage.Parse(message.c_str());
 
         if (jsonMessage.HasParseError() || !jsonMessage.IsObject()) {
-            std::cerr << "Invalid JSON from broker" << std::endl;
+            std::cerr << "Invalid JSON from broker" << '\n';
             return;
         }
 
         if (!jsonMessage.HasMember("type") || !jsonMessage["type"].IsString()) {
-            std::cout << "Unknown message without type from broker" << std::endl;
+            std::cout << "Unknown message without type from broker" << '\n';
             return;
         }
 
         if (const std::string messageType = jsonMessage["type"].GetString(); messageType == "ACKNOWLEDGED") {
             registered.store(true);
             if (jsonMessage.HasMember("serviceId") && jsonMessage["serviceId"].IsString()) {
-                std::cout << "Service registered successfully: " << jsonMessage["serviceId"].GetString() << std::endl;
+                std::cout << "Service registered successfully: " << jsonMessage["serviceId"].GetString() << '\n';
             } else {
-                std::cout << "Service registered successfully" << std::endl;
+                std::cout << "Service registered successfully" << '\n';
             }
         } else if (messageType == "REQUEST") {
             handleRequest(jsonMessage);
         } else if (messageType == "PONG") {
             handlePong(jsonMessage);
         } else {
-            std::cout << "Unknown message type from broker: " << messageType << std::endl;
+            std::cout << "Unknown message type from broker: " << messageType << '\n';
         }
         
     } catch (const std::exception& e) {
-        std::cerr << "Error handling broker message: " << e.what() << std::endl;
+        std::cerr << "Error handling broker message: " << e.what() << '\n';
     }
 }
 
 void ServiceClient::handleRequest(const rapidjson::Document& message) {
     if (!requestHandler) {
-        std::cerr << "No request handler set for service" << std::endl;
+        std::cerr << "No request handler set for service" << '\n';
         return;
     }
 
     if (!message.HasMember("requestId") || !message["requestId"].IsString() ||
         !message.HasMember("data")) {
-        std::cerr << "Invalid REQUEST message from broker" << std::endl;
+        std::cerr << "Invalid REQUEST message from broker" << '\n';
         return;
     }
 
@@ -319,7 +326,7 @@ void ServiceClient::handleRequest(const rapidjson::Document& message) {
     rapidjson::Document requestData;
     requestData.CopyFrom(message["data"], requestData.GetAllocator());
     
-    std::cout << "Processing request " << requestId << std::endl;
+    std::cout << "Processing request " << requestId << '\n';
     
     try {
         // Process request
@@ -333,7 +340,7 @@ void ServiceClient::handleRequest(const rapidjson::Document& message) {
         identity.currentLoad = std::max(0, static_cast<int>(identity.currentLoad) - 1);
         
     } catch (const std::exception& e) {
-        std::cerr << "Error processing request " << requestId << ": " << e.what() << std::endl;
+        std::cerr << "Error processing request " << requestId << ": " << e.what() << '\n';
         
         // Send error response
         rapidjson::Document errorResponse;
@@ -348,7 +355,7 @@ void ServiceClient::handleRequest(const rapidjson::Document& message) {
 
 void ServiceClient::handlePong(const rapidjson::Document& message) {
     // Just log that we received a pong
-    std::cout << "Received PONG from broker" << std::endl;
+    std::cout << "Received PONG from broker" << '\n';
 }
 
 } // namespace servicegateway

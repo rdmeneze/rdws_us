@@ -5,10 +5,8 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <cmath>
-#include <cstring>
 #include <iostream>
 #include <ranges>
-#include <sstream>
 #include <utility>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -70,8 +68,8 @@ namespace servicegateway
         running.store(false);
 
         // Close all active connections
-        std::lock_guard lock(connectionsMutex);
-        for (const auto &[fd, conn] : activeConnections)
+        std::scoped_lock lock(connectionsMutex);
+        for (const auto& fd : activeConnections | std::views::keys)
         {
             close(fd);
         }
@@ -79,13 +77,17 @@ namespace servicegateway
 
         // Wait for threads to finish
         if (tcpListener.joinable())
+        {
             tcpListener.join();
+        }
         if (unixListener.joinable())
         {
             unixListener.join();
         }
         if (healthCheckThread.joinable())
+        {
             healthCheckThread.join();
+        }
 
         // Clean up UNIX socket file
         unlink(unixSocketPath.c_str());
@@ -214,7 +216,7 @@ namespace servicegateway
 
     void ServiceGateway::handleNewConnection(const int clientFd, const std::string &address, const std::string &type)
     {
-        std::lock_guard lock(connectionsMutex);
+        std::scoped_lock lock(connectionsMutex);
 
         activeConnections[clientFd] = {.socketFd = clientFd, .address = address, .connectionType = type};
 
@@ -302,7 +304,7 @@ namespace servicegateway
 
             // Set connection info
             {
-                std::lock_guard lock(connectionsMutex);
+                std::scoped_lock lock(connectionsMutex);
                 auto it = activeConnections.find(clientFd);
                 if (it != activeConnections.end())
                 {
@@ -352,7 +354,7 @@ namespace servicegateway
 
         // Find serviceId for this connection
         {
-            std::lock_guard lock(connectionsMutex);
+            std::scoped_lock lock(connectionsMutex);
             if (const auto it = activeConnections.find(clientFd); it != activeConnections.end() && it->second.identified)
             {
                 serviceId = it->second.serviceId;
@@ -407,7 +409,7 @@ namespace servicegateway
         const std::string requestId = message["requestId"].GetString();
         const auto now = std::chrono::steady_clock::now();
 
-        std::lock_guard lock(requestsMutex);
+        std::scoped_lock lock(requestsMutex);
         const auto it = pendingRequests.find(requestId);
         if (it == pendingRequests.end())
         {
@@ -487,7 +489,10 @@ namespace servicegateway
 
         const bool completed = cv->wait_for(lock, timeout, [&]() {
             const auto it = pendingRequests.find(requestId);
-            if (it == pendingRequests.end()) return true;
+            if (it == pendingRequests.end())
+            {
+                return true;
+            }
             return it->second.state == RequestState::COMPLETED ||
                    it->second.state == RequestState::FAILED;
         });
@@ -526,7 +531,7 @@ namespace servicegateway
             return "";
         }
 
-        const std::string requestId = generateRequestId();
+        std::string requestId = generateRequestId();
 
         PendingRequest pending;
         pending.requestId = requestId;
@@ -539,7 +544,7 @@ namespace servicegateway
         pending.updatedAt = pending.createdAt;
 
         {
-            std::lock_guard lock(requestsMutex);
+            std::scoped_lock lock(requestsMutex);
             pendingRequests[requestId] = std::move(pending);
         }
 
@@ -556,13 +561,13 @@ namespace servicegateway
 
         if (!sendDirectRequest(targetServiceId, requestMessage))
         {
-            std::lock_guard lock(requestsMutex);
+            std::scoped_lock lock(requestsMutex);
             pendingRequests.erase(requestId);
             return "";
         }
 
         {
-            std::lock_guard lock(requestsMutex);
+            std::scoped_lock lock(requestsMutex);
             auto it = pendingRequests.find(requestId);
             if (it != pendingRequests.end())
             {
@@ -578,7 +583,7 @@ namespace servicegateway
     {
         int targetFd = -1;
         {
-            std::lock_guard lock(connectionsMutex);
+            std::scoped_lock lock(connectionsMutex);
             for (const auto &[fd, conn] : activeConnections)
             {
                 if (conn.identified && conn.serviceId == serviceId)
@@ -620,7 +625,7 @@ namespace servicegateway
 
     void ServiceGateway::closeConnection(const int clientFd)
     {
-        std::lock_guard lock(connectionsMutex);
+        std::scoped_lock lock(connectionsMutex);
 
         if (const auto it = activeConnections.find(clientFd); it != activeConnections.end())
         {
@@ -661,7 +666,7 @@ namespace servicegateway
 
     rapidjson::Document ServiceGateway::getConnectionStatus() const
     {
-        std::lock_guard lock(connectionsMutex);
+        std::scoped_lock lock(connectionsMutex);
 
         rapidjson::Document connections;
         connections.SetArray();
@@ -688,13 +693,13 @@ namespace servicegateway
 
     size_t ServiceGateway::getActiveConnectionCount() const
     {
-        std::lock_guard lock(connectionsMutex);
+        std::scoped_lock lock(connectionsMutex);
         return activeConnections.size();
     }
 
     size_t ServiceGateway::getTrackedRequestCount() const
     {
-        std::lock_guard lock(requestsMutex);
+        std::scoped_lock lock(requestsMutex);
         return pendingRequests.size();
     }
 
@@ -774,7 +779,7 @@ namespace servicegateway
 
                     for (const auto &capVal : svc["capabilities"].GetArray()) {
                         const std::string cap = capVal.GetString();
-                        if (capMetrics.count(cap)) {
+                        if (capMetrics.contains(cap)) {
                             const auto *cm = capMetrics.at(cap);
                             if (cm->HasMember("avgLatencyMs")) totalAvg       += (*cm)["avgLatencyMs"].GetDouble();
                             if (cm->HasMember("errorRate"))    totalErrorRate  += (*cm)["errorRate"].GetDouble();
@@ -804,7 +809,7 @@ namespace servicegateway
 
         response.AddMember("requestId", rapidjson::Value(requestId.c_str(), allocator), allocator);
 
-        std::lock_guard lock(requestsMutex);
+        std::scoped_lock lock(requestsMutex);
         const auto it = pendingRequests.find(requestId);
         if (it == pendingRequests.end())
         {
@@ -849,7 +854,7 @@ namespace servicegateway
     bool ServiceGateway::sendMessage(const int socketFd, const std::string &message)
     {
         const ssize_t sent = send(socketFd, message.c_str(), message.length(), MSG_NOSIGNAL);
-        return sent == static_cast<ssize_t>(message.length());
+        return std::cmp_equal(sent ,message.length());
     }
 
     std::string ServiceGateway::requestStateToString(const RequestState state)
@@ -889,7 +894,7 @@ namespace servicegateway
         constexpr auto retention = std::chrono::minutes(5);
         const auto now = std::chrono::steady_clock::now();
 
-        std::lock_guard lock(requestsMutex);
+        std::scoped_lock lock(requestsMutex);
         for (auto it = pendingRequests.begin(); it != pendingRequests.end();)
         {
             PendingRequest &pending = it->second;
@@ -933,7 +938,7 @@ namespace servicegateway
         }
 
         // Set socket options
-        const int opt = 1;
+        constexpr int opt = 1;
         setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
         return socketFd;

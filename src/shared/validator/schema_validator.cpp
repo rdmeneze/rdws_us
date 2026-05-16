@@ -74,7 +74,7 @@ bool SchemaValidator::loadSchemaFromString(const std::string& schemaString) cons
         rapidjson::Document schemaDoc;
         schemaDoc.Parse(schemaString.c_str());
         if (schemaDoc.HasParseError()) {
-            std::cerr << "Schema parse error at offset " << schemaDoc.GetErrorOffset() << std::endl;
+            std::cerr << "Schema parse error at offset " << schemaDoc.GetErrorOffset() << '\n';
             return false;
         }
 
@@ -85,7 +85,7 @@ bool SchemaValidator::loadSchemaFromString(const std::string& schemaString) cons
 
         return true;
     } catch (const std::exception& e) {
-        std::cerr << "Error parsing schema string: " << e.what() << std::endl;
+        std::cerr << "Error parsing schema string: " << e.what() << '\n';
         return false;
     }
 }

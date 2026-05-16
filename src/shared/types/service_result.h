@@ -5,7 +5,6 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
-#include <vector>
 
 namespace rdws::types {
 
@@ -22,9 +21,9 @@ public:
         return ServiceResult(false, std::nullopt, std::move(errorMessage), statusCode);
     }
 
-    bool isSuccess() const { return success_; }
-    bool isError() const { return !success_; }
-    int getStatusCode() const { return statusCode_; }
+    [[nodiscard]] bool isSuccess() const { return success_; }
+    [[nodiscard]] bool isError() const { return !success_; }
+    [[nodiscard]] int getStatusCode() const { return statusCode_; }
 
     const T &getData() const
     {
@@ -34,7 +33,7 @@ public:
         return data_.value();
     }
 
-    const std::string &getErrorMessage() const { return errorMessage_; }
+    [[nodiscard]] const std::string &getErrorMessage() const { return errorMessage_; }
 
 private:
     ServiceResult(bool success, std::optional<T> data, std::string errorMessage, int statusCode)

@@ -95,7 +95,7 @@ public:
     void startHealthChecker();
     
     // Connection management
-    void handleNewConnection(const int clientFd, const std::string& address, const std::string& type);
+    void handleNewConnection(int clientFd, const std::string& address, const std::string& type);
     void handleClientMessage(int clientFd, const std::string& message);
     void closeConnection(int clientFd);
     

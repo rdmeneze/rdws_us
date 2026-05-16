@@ -294,7 +294,7 @@ bool LambdaEvent::pathMatches(const std::string &pattern) const
 
     if (pattern.find('*') != std::string::npos) {
         std::string regexPattern = pattern;
-        std::replace(regexPattern.begin(), regexPattern.end(), '*', '.');
+        std::ranges::replace(regexPattern, '*', '.');
         regexPattern = "^" + regexPattern + "$";
         return std::regex_match(httpRequest_.path, std::regex(regexPattern));
     }

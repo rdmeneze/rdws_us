@@ -48,14 +48,18 @@ rapidjson::Value ServiceIdentity::toJsonValue(rapidjson::Document::AllocatorType
 ServiceIdentity ServiceIdentity::fromJson(const rapidjson::Value& json) {
     ServiceIdentity identity;
 
-    if (json.HasMember("machineName") && json["machineName"].IsString())
+    if (json.HasMember("machineName") && json["machineName"].IsString()) {
         identity.machineName = json["machineName"].GetString();
-    if (json.HasMember("serviceName") && json["serviceName"].IsString())
+    }
+    if (json.HasMember("serviceName") && json["serviceName"].IsString()) {
         identity.serviceName = json["serviceName"].GetString();
-    if (json.HasMember("serviceId") && json["serviceId"].IsString())
+    }
+    if (json.HasMember("serviceId") && json["serviceId"].IsString()) {
         identity.serviceId = json["serviceId"].GetString();
-    if (json.HasMember("version") && json["version"].IsString())
+    }
+    if (json.HasMember("version") && json["version"].IsString()) {
         identity.version = json["version"].GetString();
+    }
     identity.environment = (json.HasMember("environment") && json["environment"].IsString())
                                ? json["environment"].GetString()
                                : "dev";
@@ -82,7 +86,7 @@ ServiceIdentity ServiceIdentity::fromJson(const rapidjson::Value& json) {
     if (json.HasMember("capabilities") && json["capabilities"].IsArray()) {
         for (const auto& cap : json["capabilities"].GetArray()) {
             if (cap.IsString()) {
-                identity.capabilities.push_back(cap.GetString());
+                identity.capabilities.emplace_back(cap.GetString());
             }
         }
     }
@@ -97,11 +101,14 @@ ServiceIdentity ServiceIdentity::fromJson(const rapidjson::Value& json) {
 }
 
 bool ServiceIdentity::hasCapability(const std::string& capability) const {
-    return std::find(capabilities.begin(), capabilities.end(), capability) != capabilities.end();
+    return std::ranges::find(capabilities, capability) != capabilities.end();
 }
 
 double ServiceIdentity::getLoadPercentage() const {
-    if (maxConcurrent == 0) return 0.0;
+    if (maxConcurrent == 0)
+    {
+        return 0.0;
+    }
     return static_cast<double>(currentLoad) / static_cast<double>(maxConcurrent) * 100.0;
 }
 

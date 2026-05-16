@@ -1,9 +1,6 @@
 #pragma once
 
 #include "ServiceGateway.h"
-#include <iostream>
-#include <iomanip>
-#include <sstream>
 
 namespace servicegateway {
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <utility>
 #include <vector>
 #include <chrono>
 #include <rapidjson/document.h>
@@ -19,7 +20,7 @@ namespace servicegateway
 
         // Operational metadata
         std::string environment; // "dev", "staging", "prod"
-        uint32_t maxConcurrent{10};  // Máximo de requests simultâneos
+        uint32_t maxConcurrent{10};  // maximum simultaneos requests
         std::chrono::milliseconds avgResponseTime{0};
 
         // Connection info
@@ -36,12 +37,12 @@ namespace servicegateway
         // Constructors
         ServiceIdentity() = default;
 
-        ServiceIdentity(const std::string &machine, std::string name,
-                        const std::string &id, const std::string &ver,
+        ServiceIdentity(std::string machine, std::string name,
+                        std::string id, std::string ver,
                         const std::vector<std::string> &caps = {},
-                        const std::string &env = "dev", uint32_t maxConc = 10)
-            : machineName(machine), serviceName(std::move(name)), serviceId(id),
-              version(ver), capabilities(caps), environment(env), maxConcurrent(maxConc) {}
+                        std::string env = "dev", const uint32_t maxConc = 10)
+            : machineName(std::move(machine)), serviceName(std::move(name)), serviceId(std::move(id)),
+              version(std::move(ver)), capabilities(caps), environment(std::move(env)), maxConcurrent(maxConc) {}
 
         // JSON serialization
         [[nodiscard]] rapidjson::Document toJson() const;

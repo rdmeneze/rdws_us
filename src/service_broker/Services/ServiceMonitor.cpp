@@ -3,6 +3,7 @@
 #include <thread>
 #include <map>
 #include <set>
+#include <iostream>
 
 namespace servicegateway
 {
@@ -120,7 +121,7 @@ namespace servicegateway
             std::set<std::string> healthySet(healthyServices.begin(), healthyServices.end());
 
             for (const auto &serviceId : allServices) {
-                if (healthySet.find(serviceId) == healthySet.end()) {
+                if (!healthySet.contains(serviceId)) {
                     if (const auto *identity = registry.findServiceById(serviceId)) {
                         const auto secsSinceLastPing = std::chrono::duration_cast<std::chrono::seconds>(
                                                            std::chrono::steady_clock::now() - identity->lastPing)
@@ -137,8 +138,7 @@ namespace servicegateway
     }
 
     void ServiceMonitor::printHeader() {
-        auto now = std::chrono::steady_clock::now();
-        auto time_t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        const auto time_t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
         std::cout << "╔══════════════════════════════════════════════════════════════════════════════╗" << std::endl;
         std::cout << "║                           SERVICE GATEWAY MONITOR                            ║" << std::endl;

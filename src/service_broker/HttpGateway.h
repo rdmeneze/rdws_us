@@ -3,7 +3,6 @@
 #include "Services/ServiceGateway.h"
 
 #include <atomic>
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -16,7 +15,7 @@ namespace servicegateway {
 
 class HttpGateway {
 public:
-    HttpGateway(ServiceGateway &gateway, int port = 3001, std::string host = "0.0.0.0");
+    explicit HttpGateway(ServiceGateway &gateway, int port = 3001, std::string host = "0.0.0.0");
 
     bool start();
     void stop();

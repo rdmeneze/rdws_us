@@ -12,7 +12,7 @@ void MetricsTracker::record(const std::string &capability,
                             const bool success,
                             const bool timedOut)
 {
-    std::lock_guard lock(mutex_);
+    std::scoped_lock lock(mutex_);
     auto &s = stats_[capability];
 
     s.requestCount++;
@@ -20,8 +20,8 @@ void MetricsTracker::record(const std::string &capability,
     if (timedOut)  s.timeoutCount++;
 
     s.totalLatencyMs += latencyMs;
-    if (latencyMs < s.minLatencyMs) s.minLatencyMs = latencyMs;
-    if (latencyMs > s.maxLatencyMs) s.maxLatencyMs = latencyMs;
+    s.minLatencyMs = std::min(latencyMs, s.minLatencyMs);
+    s.maxLatencyMs = std::max(latencyMs, s.maxLatencyMs);
 
     // Maintain ring buffer for percentile computation.
     if (s.recentLatencies.size() >= CapabilityStats::kMaxSamples) {
@@ -33,7 +33,7 @@ void MetricsTracker::record(const std::string &capability,
 double MetricsTracker::computePercentile(std::vector<double> samples, const double pct)
 {
     if (samples.empty()) return 0.0;
-    std::sort(samples.begin(), samples.end());
+    std::ranges::sort(samples.begin(), samples.end());
     const std::size_t idx = static_cast<std::size_t>(
         std::ceil(pct / 100.0 * static_cast<double>(samples.size()))) - 1;
     return samples[std::min(idx, samples.size() - 1)];
@@ -41,7 +41,7 @@ double MetricsTracker::computePercentile(std::vector<double> samples, const doub
 
 rapidjson::Document MetricsTracker::toJson() const
 {
-    std::lock_guard lock(mutex_);
+    std::scoped_lock lock(mutex_);
 
     rapidjson::Document doc;
     doc.SetObject();
@@ -79,7 +79,7 @@ rapidjson::Document MetricsTracker::toJson() const
 
 void MetricsTracker::reset()
 {
-    std::lock_guard lock(mutex_);
+    std::scoped_lock lock(mutex_);
     stats_.clear();
 }
 

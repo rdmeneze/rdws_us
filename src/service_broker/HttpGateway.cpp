@@ -2,7 +2,6 @@
 
 #include <chrono>
 #include <iostream>
-#include <sstream>
 #include <string_view>
 #include <utility>
 
@@ -36,7 +35,7 @@ bool HttpGateway::start()
 
     serverThread_ = std::thread([this]() {
         std::cout << "HTTP gateway listening on http://" << host_ << ':' << port_ << '\n';
-        server_.listen(host_.c_str(), port_);
+        server_.listen(host_, port_);
         running_.store(false);
     });
 
@@ -163,8 +162,8 @@ void HttpGateway::registerRoutes()
 
 std::optional<std::string> HttpGateway::extractCapability(const std::string &path)
 {
-    static constexpr std::string_view prefix = "/invoke/";
-    if (path.rfind(prefix.data(), 0) != 0) {
+    static constexpr std::string prefix = "/invoke/";
+    if (!path.starts_with(prefix)) {
         return std::nullopt;
     }
 
@@ -182,8 +181,8 @@ std::optional<std::string> HttpGateway::extractCapability(const std::string &pat
 
 std::optional<std::string> HttpGateway::extractRequestId(const std::string &path)
 {
-    static constexpr std::string_view prefix = "/requests/";
-    if (path.rfind(prefix.data(), 0) != 0) {
+    static constexpr std::string prefix = "/requests/";
+    if (!path.starts_with(prefix.data())) {
         return std::nullopt;
     }
 

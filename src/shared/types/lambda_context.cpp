@@ -116,7 +116,7 @@ void LambdaContext::log(const std::string &message, const std::string &level) co
         << "[" << functionName_ << "] "
         << message;
 
-    std::cerr << oss.str() << std::endl;
+    std::cerr << oss.str() << '\n';
 }
 
 } // namespace rdws::types

@@ -16,17 +16,17 @@ public:
     explicit LambdaContext(const std::string &jsonString);
 
     static LambdaContext fromJson(const std::string &jsonString);
-    std::string toJson() const;
+    [[nodiscard]] std::string toJson() const;
 
-    const std::string &getRequestId() const { return requestId_; }
-    const std::string &getFunctionName() const { return functionName_; }
-    const std::string &getFunctionVersion() const { return functionVersion_; }
-    std::chrono::milliseconds getTimeout() const { return timeoutMs_; }
-    int getMemoryLimitMB() const { return memoryLimitMB_; }
+    [[nodiscard]] const std::string &getRequestId() const { return requestId_; }
+    [[nodiscard]] const std::string &getFunctionName() const { return functionName_; }
+    [[nodiscard]] const std::string &getFunctionVersion() const { return functionVersion_; }
+    [[nodiscard]] std::chrono::milliseconds getTimeout() const { return timeoutMs_; }
+    [[nodiscard]] int getMemoryLimitMB() const { return memoryLimitMB_; }
 
-    std::chrono::milliseconds getRemainingTimeMs() const;
-    bool isTimeoutImminent(std::chrono::milliseconds bufferMs = std::chrono::milliseconds(500)) const;
-    std::chrono::milliseconds getElapsedTimeMs() const;
+    [[nodiscard]] std::chrono::milliseconds getRemainingTimeMs() const;
+    [[nodiscard]] bool isTimeoutImminent(std::chrono::milliseconds bufferMs = std::chrono::milliseconds(500)) const;
+    [[nodiscard]] std::chrono::milliseconds getElapsedTimeMs() const;
 
     void log(const std::string &message, const std::string &level = "INFO") const;
 

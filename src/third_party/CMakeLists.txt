@@ -48,7 +48,7 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/TartanLlama/expected.git
     GIT_TAG v1.1.0
 )
-FetchContent_Populate(tl_expected)
+FetchContent_MakeAvailable(tl_expected)
 
 add_library(expected_wrapper INTERFACE)
 target_include_directories(expected_wrapper INTERFACE
@@ -61,7 +61,7 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
     GIT_TAG v0.15.3
 )
-FetchContent_Populate(httplib)
+FetchContent_MakeAvailable(httplib)
 
 add_library(httplib_wrapper INTERFACE)
 target_include_directories(httplib_wrapper INTERFACE
@@ -74,7 +74,7 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/gabime/spdlog.git
     GIT_TAG v1.14.1
 )
-FetchContent_Populate(spdlog)
+FetchContent_MakeAvailable(spdlog)
 
 add_library(spdlog_wrapper INTERFACE)
 target_include_directories(spdlog_wrapper INTERFACE
