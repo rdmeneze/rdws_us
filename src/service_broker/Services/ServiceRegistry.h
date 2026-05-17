@@ -10,7 +10,7 @@
 
 namespace servicegateway {
 
-enum class LoadBalancingStrategy {
+enum class LoadBalancingStrategy : std::uint8_t {
     ROUND_ROBIN,
     LEAST_LOADED,
     FASTEST_RESPONSE,
@@ -75,8 +75,10 @@ public:
     
     // Maintenance operations
     void removeUnhealthyServices(std::chrono::seconds timeout = std::chrono::seconds(60));
-    void updateServiceStats(const std::string& serviceId, uint32_t currentLoad, 
-                          std::chrono::milliseconds responseTime);
+    // Updates currentLoad reported by the service (called on PING heartbeats).
+    void updateCurrentLoad(const std::string& serviceId, uint32_t currentLoad);
+    // Records a completed request: updates avgResponseTime (weighted moving avg) and totalRequests.
+    void recordResponseTime(const std::string& serviceId, std::chrono::milliseconds responseTime);
     void recordServiceError(const std::string& serviceId);
     void pingService(const std::string& serviceId);
     

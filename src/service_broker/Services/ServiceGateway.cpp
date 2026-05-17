@@ -370,7 +370,7 @@ namespace servicegateway
                 if (stats.HasMember("currentLoad") && stats["currentLoad"].IsUint())
                 {
                     const uint32_t load = stats["currentLoad"].GetUint();
-                    registry.updateServiceStats(serviceId, load, std::chrono::milliseconds(0));
+                    registry.updateCurrentLoad(serviceId, load);
                 }
             }
 
@@ -449,11 +449,15 @@ namespace servicegateway
             }
         }
 
+        const auto latencyMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - pending.createdAt);
+        registry.recordResponseTime(pending.targetServiceId, latencyMs);
+
         if (isError)
         {
             pending.state = RequestState::FAILED;
             pending.statusCode = 500;
             pending.errorMessage = errorMessage.empty() ? "Service returned an error response" : errorMessage;
+            registry.recordServiceError(pending.targetServiceId);
         }
         else
         {

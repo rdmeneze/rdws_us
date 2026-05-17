@@ -14,7 +14,7 @@
 
 namespace servicegateway {
 
-enum class RequestState {
+enum class RequestState : std::uint8_t {
     QUEUED,
     IN_FLIGHT,
     COMPLETED,

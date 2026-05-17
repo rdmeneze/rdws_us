@@ -328,26 +328,35 @@ namespace servicegateway
         }
     }
 
-    void ServiceRegistry::updateServiceStats(const std::string &serviceId, uint32_t currentLoad,
-                                             std::chrono::milliseconds responseTime)
+    void ServiceRegistry::updateCurrentLoad(const std::string &serviceId, uint32_t currentLoad)
     {
         std::lock_guard<std::mutex> lock(registryMutex);
 
         if (const auto it = identities.find(serviceId); it != identities.end())
         {
             it->second.currentLoad = currentLoad;
+        }
+    }
+
+    void ServiceRegistry::recordResponseTime(const std::string &serviceId,
+                                             std::chrono::milliseconds responseTime)
+    {
+        std::lock_guard<std::mutex> lock(registryMutex);
+
+        if (const auto it = identities.find(serviceId); it != identities.end())
+        {
             it->second.totalRequests++;
 
-            // Update average response time (simple moving average)
             if (it->second.totalRequests == 1)
             {
                 it->second.avgResponseTime = responseTime;
             }
             else
             {
-                const auto avgMs = it->second.avgResponseTime.count();
-                const auto newMs = responseTime.count();
-                const auto newAvg = (static_cast<double>(avgMs) * 0.9) + (static_cast<double>(newMs) * 0.1); // Weighted average
+                // Exponential weighted moving average (α = 0.1)
+                const auto avgMs = static_cast<double>(it->second.avgResponseTime.count());
+                const auto newMs = static_cast<double>(responseTime.count());
+                const auto newAvg = avgMs * 0.9 + newMs * 0.1;
                 it->second.avgResponseTime = std::chrono::milliseconds(static_cast<long>(newAvg));
             }
         }
